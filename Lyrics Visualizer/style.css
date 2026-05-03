@@ -1,0 +1,16 @@
+/* body { 
+    background: linear-gradient(180deg, #0a0a23 0%, #1a0033 100%); 
+    color: #fff; font-family: 'Georgia', serif; 
+    margin: 0; padding: 20px; 
+}
+.container { max-width: 800px; margin: auto; }
+header { text-align: center; }
+header h1 { font-size: 2.5em; text-shadow: 0 0 20px #ccc; }
+.mood-input { display: flex; gap: 10px; justify-content: center; margin: 40px 0; }
+select, input, button { padding: 12px; border: none; border-radius: 25px; background: rgba(255,255,255,0.1); color: #fff; }
+button { background: linear-gradient(45deg, #ff6b6b, #4ecdc4); cursor: pointer; transition: transform 0.3s; }
+button:hover { transform: scale(1.05); }
+#results, #viz { margin-top: 40px; }
+.lyrics { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+.hidden { display: none; }
+#chordCanvas { border: 2px solid #fff; border-radius: 15px; background: radial-gradient(circle, #000 0%, #333 100%); display: block; margin: 0 auto 20px; } */

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gen Z Dark Glow Visualizer</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap');
+
+    :root {
+        --theme-color: #00ffe5; 
+    }
+
+    body {
+        margin: 0;
+        background-color: #050505 !important;
+        color: white;
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+        transition: background 0.1s ease;
+    }
+
+    /* Fullscreen Canvas for Animations */
+    #bgCanvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    /* Glassmorphism Controls UI */
+    .controls {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 20;
+        background: rgba(15, 15, 20, 0.6);
+        padding: 30px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 90%;
+        max-width: 420px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .controls.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -40%) scale(0.95);
+    }
+
+    .controls label {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 800;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .controls select, .controls textarea, .controls input[type="file"] {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 12px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        outline: none;
+        transition: 0.3s;
+        box-sizing: border-box;
+    }
+
+    .controls select:focus, .controls textarea:focus {
+        border-color: var(--theme-color);
+        box-shadow: 0 0 15px var(--theme-color);
+    }
+
+    .controls textarea {
+        height: 100px;
+        resize: none;
+    }
+
+    .controls button {
+        background: var(--theme-color);
+        color: #000;
+        border: 2px solid var(--theme-color);
+        padding: 15px;
+        font-size: 1rem;
+        font-weight: 900;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 0 20px rgba(0, 255, 229, 0.4);
+    }
+
+    .controls button:hover {
+        box-shadow: 0 0 35px var(--theme-color);
+        transform: translateY(-2px);
+    }
+
+    /* Lyrics Container */
+    #lyricsBox {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        overflow-y: auto;
+        text-align: center;
+        padding-top: 45vh;
+        padding-bottom: 45vh;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        z-index: 5;
+    }
+
+    #lyricsBox::-webkit-scrollbar { display: none; }
+
+    /* Lyrics Style (Gen Z Vibe) */
+    .lyric-line {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.05);
+        margin: 25px 0;
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        transform: scale(0.85);
+        letter-spacing: -1px;
+    }
+
+    /* Active Line Formatting */
+    .active {
+        opacity: 1;
+        transform: scale(1.15);
+        text-shadow: 0 0 20px var(--theme-color), 0 0 60px var(--theme-color);
+    }
+
+    /* Karaoke progress effect */
+    .active span {
+        background-image: linear-gradient(90deg, var(--theme-color) 0%, var(--theme-color) 100%);
+        background-repeat: no-repeat;
+        background-size: 0% 100%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Native Audio Player - Fixed visibility */
+    audio {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 600px;
+        z-index: 50; /* Brought to the very front */
+        opacity: 1; /* Visible by default now */
+        transition: opacity 0.5s ease;
+    }
+</style>
+</head>
+<body>
+
+<!-- Canvas for visualizer modes -->
+<canvas id="bgCanvas"></canvas>
+
+<div class="controls" id="setupUI">
+    <label>✨ Animation Style:</label>
+    <select id="animationMode">
+        <option value="pulse">Neon Pulse</option>
+        <option value="minimal">Minimal Dark</option>
+        <option value="wave">Audio Wave</option>
+        <option value="particles">Bass Particles</option>
+    </select>
+    
+    <label>🎵 1. Upload Audio:</label>
+    <input type="file" id="audioFile" accept="audio/*">
+    
+    <label>📄 2. Paste LRC:</label>
+    <textarea id="lrcInput" placeholder="[00:11.49] Paste your LRC timestamps here..."></textarea>
+    
+    <!-- Changed to a single action button -->
+    <button id="loadLyricsBtn">START VISUALIZER</button>
+</div>
+
+<audio id="audio" controls></audio>
+
+<div id="lyricsBox">
+    <div class="lyric-line active"><span>Upload audio and paste LRC to start.</span></div>
+</div>
+
+<script>
+    const audio = document.getElementById("audio");
+    const lyricsBox = document.getElementById("lyricsBox");
+    const lrcInput = document.getElementById("lrcInput");
+    const setupUI = document.getElementById("setupUI");
+    const modeSelect = document.getElementById("animationMode");
+    const canvas = document.getElementById("bgCanvas");
+    const canvasCtx = canvas.getContext("2d");
+    
+    let lyricsData = [];
+    let currentIndex = -1;
+
+    // Resize canvas
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    /* Upload audio */
+    document.getElementById("audioFile").addEventListener("change", e => {
+        if(e.target.files[0]) {
+            audio.src = URL.createObjectURL(e.target.files[0]);
+        }
+    });
+
+    /* Single Click Action: Load Lyrics AND Play Audio */
+    document.getElementById("loadLyricsBtn").addEventListener("click", () => {
+        const rawText = lrcInput.value;
+        const fileInput = document.getElementById("audioFile");
+        
+        if (!fileInput.files[0] && !audio.src) return alert("Please upload an audio file first!");
+        if (!rawText.trim()) return alert("Please paste lyrics first!");
+        
+        // 1. Parse and Render Lyrics
+        lyricsData = parseLRC(rawText);
+        renderLyrics();
+        
+        // 2. Play the Audio directly (this will trigger audio.onplay and hide the UI)
+        audio.play().catch(err => {
+            console.warn("Browser blocked auto-play. User must click the native player.", err);
+            const btn = document.getElementById("loadLyricsBtn");
+            btn.textContent = "CLICK NATIVE PLAY BUTTON BELOW ↓";
+        });
+    });
+
+    /* Parse */
+    function parseLRC(lrc) {
+        return lrc.split("\n").map(line => {
+            const match = line.match(/\[(\d+):(\d+\.\d+)\](.*)/);
+            if (!match) return null;
+            return {
+                time: parseInt(match[1]) * 60 + parseFloat(match[2]),
+                text: match[3].trim() || "..."
+            };
+        }).filter(Boolean);
+    }
+
+    /* Render */
+    function renderLyrics() {
+        lyricsBox.innerHTML = "";
+        lyricsData.forEach(line => {
+            const div = document.createElement("div");
+            div.className = "lyric-line";
+            
+            const span = document.createElement("span");
+            span.textContent = line.text;
+            
+            div.appendChild(span);
+            lyricsBox.appendChild(div);
+        });
+    }
+
+    /* SYNC ENGINE */
+    audio.addEventListener("timeupdate", () => {
+        if (lyricsData.length === 0) return;
+
+        const time = audio.currentTime;
+        const lines = document.querySelectorAll(".lyric-line");
+
+        for (let i = 0; i < lyricsData.length; i++) {
+            const current = lyricsData[i];
+            const next = lyricsData[i + 1];
+
+            if (time >= current.time && (!next || time < next.time)) {
+                if (currentIndex === i) return;
+                
+                currentIndex = i;
+                lines.forEach(l => l.classList.remove("active"));
+                
+                const activeLine = lines[i];
+                if (!activeLine) return;
+                
+                activeLine.classList.add("active");
+                activeLine.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+                break;
+            }
+        }
+    });
+
+    /* Karaoke Progress Animation */
+    function updateKaraoke() {
+        if (currentIndex === -1 || lyricsData.length === 0) return;
+        
+        const current = lyricsData[currentIndex];
+        const next = lyricsData[currentIndex + 1];
+        const duration = next ? next.time - current.time : 3;
+        const progress = (audio.currentTime - current.time) / duration;
+        
+        const lines = document.querySelectorAll(".lyric-line");
+        const span = lines[currentIndex]?.querySelector("span");
+        
+        if (span) {
+            span.style.backgroundSize = `${Math.max(0, Math.min(progress, 1)) * 100}% 100%`;
+        }
+    }
+
+    /* AUDIO VISUALIZER & DYNAMIC COLOR ENGINE */
+    let ctx, analyser, dataArray;
+    let currentHue = 0; 
+    let particles = [];
+
+    for(let i=0; i<100; i++) {
+        particles.push({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: Math.random() * 3 + 1,
+            speedY: Math.random() * -3 - 1
+        });
+    }
+
+    audio.onplay = () => {
+        // Automatically hide the setup UI when the song starts playing!
+        setupUI.classList.add('hidden');
+
+        if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = ctx.createAnalyser();
+            const src = ctx.createMediaElementSource(audio);
+            src.connect(analyser);
+            analyser.connect(ctx.destination);
+            
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            animate();
+        }
+    };
+
+    function animate() {
+        requestAnimationFrame(animate);
+        analyser.getByteFrequencyData(dataArray);
+        
+        let bass = 0;
+        for (let i = 0; i < 10; i++) { bass += dataArray[i]; }
+        bass /= 10;
+        let intensity = bass / 255;
+        
+        currentHue += 0.2 + (intensity * 2);
+        if (currentHue > 360) currentHue = 0;
+
+        const dynamicColor = `hsl(${currentHue}, 100%, 55%)`;
+        const transparentColor = `hsla(${currentHue}, 100%, 55%, ${0.1 + intensity * 0.2})`;
+        
+        document.documentElement.style.setProperty('--theme-color', dynamicColor);
+
+        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+        let mode = modeSelect.value;
+
+        if (mode === "minimal") {
+            document.body.style.background = "#050505";
+        } 
+        else if (mode === "pulse") {
+            document.body.style.background = `radial-gradient(circle at center, hsla(${currentHue}, 100%, 50%, ${0.05 + intensity * 0.3}), #050505 70%)`;
+        } 
+        else if (mode === "wave") {
+            document.body.style.background = "#050505";
+            canvasCtx.beginPath();
+            const sliceWidth = canvas.width * 1.0 / dataArray.length;
+            let x = 0;
+            for(let i = 0; i < dataArray.length; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * canvas.height / 2;
+                if(i === 0) canvasCtx.moveTo(x, y);
+                else canvasCtx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            canvasCtx.lineTo(canvas.width, canvas.height / 2);
+            canvasCtx.strokeStyle = transparentColor;
+            canvasCtx.lineWidth = 4 + (bass * 0.05);
+            canvasCtx.stroke();
+        } 
+        else if (mode === "particles") {
+            document.body.style.background = "#050505";
+            particles.forEach(p => {
+                p.y += p.speedY * (1 + intensity * 2);
+                if (p.y < 0) { p.y = canvas.height; p.x = Math.random() * canvas.width; }
+                
+                canvasCtx.beginPath();
+                canvasCtx.arc(p.x, p.y, p.size * (1 + intensity), 0, Math.PI * 2);
+                canvasCtx.fillStyle = dynamicColor;
+                canvasCtx.shadowBlur = 15;
+                canvasCtx.shadowColor = dynamicColor;
+                canvasCtx.fill();
+            });
+        }
+        
+        updateKaraoke();
+    }
+
+    // Fixed Audio player hover reveal logic
+    let hideAudioTimeout;
+    
+    // Hide initially after a few seconds if playing
+    setTimeout(() => { if(!audio.paused) audio.style.opacity = "0"; }, 3000);
+
+    document.body.addEventListener("mousemove", () => {
+        audio.style.opacity = "1"; // Always show when mouse moves
+        
+        clearTimeout(hideAudioTimeout);
+        hideAudioTimeout = setTimeout(() => {
+            if(!audio.paused) {
+                audio.style.opacity = "0"; // Fade out if playing
+            }
+        }, 2500);
+    });
+</script>
+</body>
+</html>
